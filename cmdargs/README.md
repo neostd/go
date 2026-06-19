@@ -16,7 +16,7 @@ provides functionality to parse, manipulate, and format command-line arguments e
 To use `cmdargs`, import the module in your Go project:
 
 ```go
-import "github.com/neobeard/go/cmdargs"
+import "github.com/neostd/go/cmdargs"
 
 func main() {
   args := cmdargs.Split("arg1 'arg 2' \"arg 3\"")
