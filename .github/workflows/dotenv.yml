@@ -1,0 +1,70 @@
+name: dotenv
+
+on:
+  push:
+    paths:
+      - 'dotenv/**'
+      - '.github/workflows/dotenv.yml'
+    tags:
+      - 'dotenv/v*'
+    branches:
+      - '**'
+  pull_request:
+    paths:
+      - 'dotenv/**'
+      - '.github/workflows/dotenv.yml'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./dotenv
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: dotenv/go.mod
+          check-latest: true
+          cache-dependency-path: dotenv/go.sum
+
+      - name: Restore module state
+        run: go mod tidy
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...
+
+  health:
+    name: Health Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dotenv
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: stable
+          check-latest: true
+          cache-dependency-path: dotenv/go.sum
+
+      - name: Vulnerability Check
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@63c23d5020da8f97005b6de340504130bdbe42c7 # v9
+        with:
+          version: latest
+          working-directory: ./dotenv

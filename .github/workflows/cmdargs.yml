@@ -1,0 +1,71 @@
+name: cmdargs
+
+on: 
+  push:
+    paths: 
+      - 'cmdargs/**'
+      - '.github/workflows/cmdargs.yml'
+    tags:
+      - 'cmdargs/v*'
+    branches:
+      - '**'
+  pull_request:
+    paths: 
+      - 'cmdargs/**'
+      - '.github/workflows/cmdargs.yml'
+
+env:
+  GOVERSION: '^1.18.1'
+
+jobs:
+  build: 
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./cmdargs
+    steps:
+      - name: 🟣 Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: ${{ env.GOVERSION }}
+
+      - name: 🧳 Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: 🔃 Restore 
+        run: go mod tidy
+
+      - name: 🏭 Build
+        run: go build -v ./...
+
+      - name: 🧪 Test
+        run: go test -v ./...
+
+  health:
+    name: Health Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./cmdargs
+    steps:
+      - name: 🧳 Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: 🟣 Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: stable
+          check-latest: true
+          cache-dependency-path: cmdargs/go.sum
+
+      - name: 🔎 Vulnerability Check
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      - name: 🧹 Lint
+        uses: golangci/golangci-lint-action@63c23d5020da8f97005b6de340504130bdbe42c7 # v9
+        with:
+          version: latest
+          working-directory: ./cmdargs

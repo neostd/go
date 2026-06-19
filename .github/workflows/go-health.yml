@@ -1,0 +1,58 @@
+name: go-health
+
+on:
+  schedule:
+    - cron: '17 0 * * 1'
+    - cron: '17 0 * * 4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover-modules:
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.set-modules.outputs.modules }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - id: set-modules
+        shell: bash
+        run: |
+          modules=$(find . -name go.mod -not -path './.git/*' -not -path '*/vendor/*' -exec dirname {} \; | sort | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "modules=$modules" >> "$GITHUB_OUTPUT"
+
+  module-checks:
+    needs: discover-modules
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJSON(needs.discover-modules.outputs.modules) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: stable
+          check-latest: true
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+
+      - name: Check vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@63c23d5020da8f97005b6de340504130bdbe42c7 # v9
+        with:
+          version: latest
+          working-directory: ${{ matrix.module }}
+
+      - name: Test
+        run: go test ./...
