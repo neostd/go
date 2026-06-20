@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	testutil.SetupMise(NAME, NAME)
+	testutil.SetupMiseWithDeps(NAME, []string{"erlang"}, NAME)
 }
 
 func TestNew(t *testing.T) {

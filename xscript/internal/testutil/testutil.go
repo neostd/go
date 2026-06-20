@@ -35,6 +35,12 @@ func RequireExecutable(t *testing.T, names ...string) string {
 // PATH when USE_MISE_FOR_TESTING=true. USE_MISE_FOR_TESTS is also accepted
 // for backward compatibility.
 func SetupMise(tool string, bins ...string) {
+	SetupMiseWithDeps(tool, nil, bins...)
+}
+
+// SetupMiseWithDeps installs any prerequisite tools before installing the
+// requested runtime with mise.
+func SetupMiseWithDeps(tool string, deps []string, bins ...string) {
 	useMise := strings.ToLower(os.Getenv("USE_MISE_FOR_TESTING")) == "true" ||
 		strings.ToLower(os.Getenv("USE_MISE_FOR_TESTS")) == "true"
 	if !useMise {
@@ -46,11 +52,14 @@ func SetupMise(tool string, bins ...string) {
 		return
 	}
 
+	for _, dep := range deps {
+		if !installMiseTool(misePath, dep+"@latest") {
+			return
+		}
+	}
+
 	toolSpec := tool + "@latest"
-	install := stdexec.Command(misePath, "install", "-y", toolSpec)
-	install.Stdout = &bytes.Buffer{}
-	install.Stderr = &bytes.Buffer{}
-	if err := install.Run(); err != nil {
+	if !installMiseTool(misePath, toolSpec) {
 		return
 	}
 
@@ -69,6 +78,13 @@ func SetupMise(tool string, bins ...string) {
 		prependPath(filepath.Dir(path))
 		return
 	}
+}
+
+func installMiseTool(misePath, toolSpec string) bool {
+	install := stdexec.Command(misePath, "install", "-y", toolSpec)
+	install.Stdout = &bytes.Buffer{}
+	install.Stderr = &bytes.Buffer{}
+	return install.Run() == nil
 }
 
 // prependPath adds a directory to the front of PATH once per process.
