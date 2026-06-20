@@ -1,0 +1,107 @@
+// Package testutil contains shared helpers used by xscript tests.
+package testutil
+
+import (
+	"bytes"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+)
+
+var pathMu sync.Mutex
+
+// RequireExecutable skips the test unless one of the provided executable names
+// can be resolved on PATH.
+func RequireExecutable(t *testing.T, names ...string) string {
+	t.Helper()
+
+	for _, name := range names {
+		path, err := exec.LookPath(name)
+		if err == nil {
+			return path
+		}
+	}
+
+	t.Skipf("skipping test: executable not found on PATH: %s", strings.Join(names, ", "))
+	return ""
+}
+
+// SetupMise installs a runtime with mise and prepends its bin directory to
+// PATH when USE_MISE_FOR_TESTS=true.
+func SetupMise(tool string, bins ...string) {
+	if strings.ToLower(os.Getenv("USE_MISE_FOR_TESTS")) != "true" {
+		return
+	}
+
+	if _, err := exec.LookPath("mise"); err != nil {
+		return
+	}
+
+	toolSpec := tool + "@latest"
+	install := exec.Command("mise", "install", "-y", toolSpec)
+	install.Stdout = &bytes.Buffer{}
+	install.Stderr = &bytes.Buffer{}
+	if err := install.Run(); err != nil {
+		return
+	}
+
+	for _, bin := range bins {
+		which := exec.Command("mise", "which", bin, "--tool", toolSpec)
+		output, err := which.Output()
+		if err != nil {
+			continue
+		}
+
+		path := strings.TrimSpace(string(output))
+		if path == "" {
+			continue
+		}
+
+		prependPath(filepath.Dir(path))
+		return
+	}
+}
+
+// prependPath adds a directory to the front of PATH once per process.
+func prependPath(dir string) {
+	if dir == "" {
+		return
+	}
+
+	pathMu.Lock()
+	defer pathMu.Unlock()
+
+	parts := filepath.SplitList(os.Getenv("PATH"))
+	for _, part := range parts {
+		if strings.EqualFold(part, dir) {
+			return
+		}
+	}
+
+	if len(parts) == 0 || parts[0] == "" {
+		_ = os.Setenv("PATH", dir)
+		return
+	}
+
+	_ = os.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+// AssertExecutablePath verifies that the resolved executable matches one of the
+// expected runtime names, accounting for common Windows suffixes.
+func AssertExecutablePath(t *testing.T, path string, names ...string) {
+	t.Helper()
+
+	base := strings.ToLower(filepath.Base(path))
+	trimmed := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(base, ".exe"), ".bat"), ".cmd")
+	for _, name := range names {
+		lower := strings.ToLower(name)
+		if base == lower || trimmed == lower {
+			return
+		}
+	}
+
+	t.Fatalf("expected executable path %q to match one of %v", path, names)
+}

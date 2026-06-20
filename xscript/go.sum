@@ -1,0 +1,6 @@
+github.com/neostd/go/cmdargs v0.0.0-alpha.0 h1:q7zdq3p/eYm7CA2Gxa0ybERPQQZ3zgOTGEQ+3oWS+so=
+github.com/neostd/go/cmdargs v0.0.0-alpha.0/go.mod h1:SCS1KaZIZ57rakmg55jI7Zxkza85SxEMxPqUjJ17lJc=
+github.com/neostd/go/env v0.0.0-alpha.1 h1:+cjWoPSE6TJuNhQNXEO9r4Et831ViHNQNOh8ffvrniE=
+github.com/neostd/go/env v0.0.0-alpha.1/go.mod h1:/oToblQBH5K7Zk+em+lmG0OyxtG+ryrxzdRICflmfn8=
+github.com/neostd/go/exec v0.0.0-alpha.0 h1:+w2wCNTupWpYtxkKPBb5vZRHsMfWuMM5yVLxAz/5tYA=
+github.com/neostd/go/exec v0.0.0-alpha.0/go.mod h1:DpMOrn5oyLLt58ixpl6hdzndGYat+ScH54fT8DhGkKw=

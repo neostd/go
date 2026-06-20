@@ -1,0 +1,35 @@
+bash := if os_family() == 'windows' {
+    'C:\\PROGRA~1\Git\\usr\\bin\\bash.exe'
+} else {
+    '/usr/bin/env bash'
+}
+
+module := 'xscript'
+
+test:
+    #!{{bash}}
+    go test ./...
+
+vuln:
+    #!{{bash}}
+    go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+lint:
+    #!{{bash}}
+    go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run ./...
+
+bump:
+    #!{{bash}}
+    deno run -A ../bin/publish.ts {{module}} --bump --patch
+
+bump-minor:
+    #!{{bash}}
+    deno run -A ../bin/publish.ts {{module}} --bump --minor
+bump-major:
+    #!{{bash}}
+    deno run -A ../bin/publish.ts {{module}} --bump --major
+
+tag:
+    #!{{bash}}
+    deno run -A ../bin/publish.ts {{module}} --tag
+    
