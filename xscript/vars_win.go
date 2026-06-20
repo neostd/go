@@ -3,6 +3,12 @@
 
 package xscript
 
+var win = ""
+
+func SetWindows(w string) {
+	win = w
+}
+
 func GetVar(name string) string {
 	varName := ""
 	if prefix != "" {

@@ -4,11 +4,13 @@ package testutil
 import (
 	"bytes"
 	"os"
-	"os/exec"
+	stdexec "os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+
+	neosexec "github.com/neostd/go/exec"
 )
 
 var pathMu sync.Mutex
@@ -19,7 +21,7 @@ func RequireExecutable(t *testing.T, names ...string) string {
 	t.Helper()
 
 	for _, name := range names {
-		path, err := exec.LookPath(name)
+		path, err := stdexec.LookPath(name)
 		if err == nil {
 			return path
 		}
@@ -30,18 +32,22 @@ func RequireExecutable(t *testing.T, names ...string) string {
 }
 
 // SetupMise installs a runtime with mise and prepends its bin directory to
-// PATH when USE_MISE_FOR_TESTS=true.
+// PATH when USE_MISE_FOR_TESTING=true. USE_MISE_FOR_TESTS is also accepted
+// for backward compatibility.
 func SetupMise(tool string, bins ...string) {
-	if strings.ToLower(os.Getenv("USE_MISE_FOR_TESTS")) != "true" {
+	useMise := strings.ToLower(os.Getenv("USE_MISE_FOR_TESTING")) == "true" ||
+		strings.ToLower(os.Getenv("USE_MISE_FOR_TESTS")) == "true"
+	if !useMise {
 		return
 	}
 
-	if _, err := exec.LookPath("mise"); err != nil {
+	misePath, ok := neosexec.Which("mise")
+	if !ok || misePath == "" {
 		return
 	}
 
 	toolSpec := tool + "@latest"
-	install := exec.Command("mise", "install", "-y", toolSpec)
+	install := stdexec.Command(misePath, "install", "-y", toolSpec)
 	install.Stdout = &bytes.Buffer{}
 	install.Stderr = &bytes.Buffer{}
 	if err := install.Run(); err != nil {
@@ -49,7 +55,7 @@ func SetupMise(tool string, bins ...string) {
 	}
 
 	for _, bin := range bins {
-		which := exec.Command("mise", "which", bin, "--tool", toolSpec)
+		which := stdexec.Command(misePath, "which", bin, "--tool", toolSpec)
 		output, err := which.Output()
 		if err != nil {
 			continue
